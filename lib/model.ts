@@ -100,6 +100,7 @@ export interface BoardRow {
   model: {
     category_multiple: number;
     multiple_samples: number;
+    multiple_source: 'category' | 'global';
     growth_pct: number;
     growth_multiplier: number;
     maturity_multiplier: number;
@@ -123,6 +124,7 @@ export interface RadarRow {
   implied_value_usd: number;
   category_multiple: number;
   multiple_samples: number;
+  multiple_source: 'category' | 'global';
   growth_multiplier: number;
   maturity_multiplier: number;
   on_watchlist: boolean;
@@ -204,7 +206,7 @@ function categoryOf(p: SnapshotProtocol): string {
 }
 
 export interface MultipleTable {
-  byCategory: Map<string, { multiple: number; samples: number }>;
+  byCategory: Map<string, { multiple: number; samples: number; source: 'category' | 'global' }>;
   global: { multiple: number; samples: number };
 }
 
@@ -227,21 +229,30 @@ export function categoryMultiples(snapshot: Snapshot, model: ModelConstants = MO
     all.push(ratio);
   }
   const global = { multiple: all.length > 0 ? median(all) : 0.2, samples: all.length };
-  const byCategory = new Map<string, { multiple: number; samples: number }>();
+  const byCategory = new Map<string, { multiple: number; samples: number; source: 'category' | 'global' }>();
   for (const [key, list] of ratios) {
     byCategory.set(key, list.length >= model.min_category_samples
-      ? { multiple: median(list), samples: list.length }
-      : { multiple: global.multiple, samples: list.length });
+      ? { multiple: median(list), samples: list.length, source: 'category' }
+      : { multiple: global.multiple, samples: list.length, source: 'global' });
   }
   return { byCategory, global };
 }
 
-/** The multiple one protocol is scored with, and how many live peers stand behind it. */
-function multipleFor(p: SnapshotProtocol, table: MultipleTable, model: ModelConstants): { multiple: number; samples: number } {
+/**
+ * The multiple one protocol is scored with, where it came from, and how many live peers stand
+ * behind the number actually used: a thin category's row is priced by the global set, so the
+ * global sample count is the honest one to print beside it.
+ */
+function multipleFor(p: SnapshotProtocol, table: MultipleTable, model: ModelConstants): { multiple: number; samples: number; source: 'category' | 'global' } {
   const entry = table.byCategory.get(categoryOf(p));
-  const raw = entry === undefined ? table.global.multiple : entry.multiple;
-  const samples = entry === undefined ? table.global.samples : entry.samples;
-  return { multiple: Math.min(model.multiple_max, Math.max(model.multiple_min, raw)), samples };
+  if (entry === undefined) {
+    return { multiple: Math.min(model.multiple_max, Math.max(model.multiple_min, table.global.multiple)), samples: table.global.samples, source: 'global' };
+  }
+  return {
+    multiple: Math.min(model.multiple_max, Math.max(model.multiple_min, entry.multiple)),
+    samples: entry.source === 'category' ? entry.samples : table.global.samples,
+    source: entry.source,
+  };
 }
 
 /** The adjustments and the implied value one protocol gets under `model` and the multiples table. */
@@ -250,9 +261,9 @@ export function impliedValue(
   asOf: string,
   table: MultipleTable,
   model: ModelConstants = MODEL,
-): { implied: number; multiple: number; samples: number; growthPct: number; growthMult: number; maturityMult: number; age: number | null } {
+): { implied: number; multiple: number; samples: number; source: 'category' | 'global'; growthPct: number; growthMult: number; maturityMult: number; age: number | null } {
   const age = ageDays(asOf, protocol.listed_at);
-  const { multiple, samples } = multipleFor(protocol, table, model);
+  const { multiple, samples, source } = multipleFor(protocol, table, model);
   const rawGrowth = finite(protocol.change_7d, 0);
   const growthPct = Math.min(model.growth_cap, Math.max(model.growth_floor, rawGrowth));
   const growthMult = 1 + (growthPct / 100) * model.growth_weight;
@@ -260,7 +271,7 @@ export function impliedValue(
   const maturityMult = model.maturity_floor + (Math.min(Math.max(ageForModel, 0), model.maturity_days) / model.maturity_days) * model.maturity_range;
   const base = protocol.tvl_usd * multiple;
   const implied = Math.max(1, Math.round(base * growthMult * maturityMult));
-  return { implied, multiple, samples, growthPct, growthMult, maturityMult, age };
+  return { implied, multiple, samples, source, growthPct, growthMult, maturityMult, age };
 }
 
 /** DefiLlama's version-marker rule: a name ending in a release is a pool of another protocol. */
@@ -336,6 +347,7 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
     model: {
       category_multiple: round4(s.multiple),
       multiple_samples: s.samples,
+      multiple_source: s.source,
       growth_pct: s.growthPct,
       growth_multiplier: round4(s.growthMult),
       maturity_multiplier: round4(s.maturityMult),
@@ -488,6 +500,7 @@ export function radarRow(row: BoardRow, watchlist: Set<string>): RadarRow {
     implied_value_usd: row.implied_value_usd,
     category_multiple: row.model.category_multiple,
     multiple_samples: row.model.multiple_samples,
+    multiple_source: row.model.multiple_source,
     growth_multiplier: row.model.growth_multiplier,
     maturity_multiplier: row.model.maturity_multiplier,
     on_watchlist: watchlist.has(row.slug),

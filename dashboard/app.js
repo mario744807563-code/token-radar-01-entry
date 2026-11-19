@@ -214,7 +214,10 @@
 
     var math = el('div', 'math');
     math.appendChild(mathRow('TVL (snapshot)', moneyFull(r.tvl_usd)));
-    math.appendChild(mathRow('× category multiple (' + (r.category || 'Uncategorized') + ', ' + r.multiple_samples + ' live peers)', r.category_multiple.toFixed(4) + '×'));
+    var multLabel = r.multiple_source === 'category'
+      ? '× category multiple (' + (r.category || 'Uncategorized') + ' median, ' + r.multiple_samples + ' live peers)'
+      : '× category multiple (all-category median, ' + r.multiple_samples + ' live peers — ' + (r.category || 'this category') + ' has too few)';
+    math.appendChild(mathRow(multLabel, r.category_multiple.toFixed(4) + '×'));
     math.appendChild(mathRow('× 7-day growth adjustment', r.growth_multiplier.toFixed(4) + '×'));
     math.appendChild(mathRow('× maturity adjustment (' + ageText(r.age_days) + ' without a token)', r.maturity_multiplier.toFixed(4) + '×'));
     var total = mathRow('= implied value', moneyFull(r.implied_value_usd));
