@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar — pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-in">
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="tagline">Protocols that record no token yet, ranked by what a token would be worth if the record stayed as it is — and how to farm each one before it issues.</p>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<section class="controls" aria-label="Board controls">
+  <div class="seg" role="tablist" aria-label="View">
+    <button id="view-board" class="seg-on" type="button">Pre-token board</button>
+    <button id="view-live" type="button">Live tokens</button>
+  </div>
+  <label class="ctl">Search <input id="q" type="search" placeholder="protocol name…"></label>
+  <label class="ctl">Category <select id="f-cat"></select></label>
+  <label class="ctl">Chain <select id="f-chain"></select></label>
+  <label class="ctl">Sort <select id="f-sort">
+    <option value="rank">Implied value</option>
+    <option value="tvl">TVL</option>
+    <option value="change">7-day change</option>
+    <option value="age">Age (oldest first)</option>
+    <option value="multiple">Category multiple</option>
+  </select></label>
+  <label class="ctl check"><input id="f-watch" type="checkbox"> Watchlist only</label>
+</section>
+
+<main class="layout">
+  <section class="board-wrap">
+    <table class="board" id="board">
+      <thead id="board-head"></thead>
+      <tbody id="board-body"></tbody>
+    </table>
+    <p class="empty" id="empty" hidden>No protocol matches those filters. Loosen one and the radar sweeps again.</p>
+  </section>
+  <aside class="detail" id="detail" aria-label="Protocol detail"></aside>
+</main>
+
+<details class="method" id="method">
+  <summary>How the implied value is derived — the model, stated in full</summary>
+  <div id="method-body"></div>
+</details>
+
+<footer>
+  <p>Implied value is this board's own claim, computed only from the snapshot's figures; it is not a prediction that a token will be issued. Figures are the snapshot's record: a protocol is said to <em>record</em> no token, never to have none. Farm plans are starting points, not financial advice — check each protocol's own pages before acting.</p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
